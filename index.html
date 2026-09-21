@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BETOx1 Live Code Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: #161b22;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #30363d;
+  }
+  header h1 {
+    font-size: 16px;
+    color: #58a6ff;
+    font-weight: 600;
+  }
+  header .status {
+    margin-left: auto;
+    font-size: 12px;
+    color: #3fb950;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #3fb950; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .toolbar {
+    background: #161b22;
+    padding: 10px 20px;
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid #30363d;
+    flex-wrap: wrap;
+  }
+  button {
+    background: #21262d;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all .15s;
+  }
+  button:hover { background: #30363d; border-color: #8b949e; }
+  button.primary { background: #238636; border-color: #2ea043; }
+  button.primary:hover { background: #2ea043; }
+  button.danger { background: #da3633; border-color: #f85149; }
+  button.danger:hover { background: #f85149; }
+
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: #30363d;
+    overflow: hidden;
+  }
+  .pane {
+    background: #0d1117;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .pane-header {
+    padding: 8px 14px;
+    background: #161b22;
+    font-size: 12px;
+    color: #8b949e;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .pane-header .tag {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag.html { background: #e34c26; color: white; }
+  .tag.css  { background: #264de4; color: white; }
+  .tag.js   { background: #f7df1e; color: black; }
+  .tag.preview { background: #3fb950; color: black; }
+  .tag.console { background: #da3633; color: white; }
+
+  .editors {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .editor-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-bottom: 1px solid #30363d;
+  }
+  .editor-block:last-child { border-bottom: none; }
+  textarea {
+    flex: 1;
+    background: #0d1117;
+    color: #e6edf3;
+    border: none;
+    padding: 12px 14px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    tab-size: 2;
+  }
+
+  .preview-pane iframe {
+    flex: 1;
+    background: white;
+    border: none;
+    width: 100%;
+  }
+  .console-pane {
+    height: 140px;
+    background: #010409;
+    border-top: 1px solid #30363d;
+    padding: 8px 14px;
+    overflow-y: auto;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    color: #8b949e;
+  }
+  .console-pane .err { color: #f85149; }
+  .console-pane .log { color: #58a6ff; }
+  .console-pane .ok  { color: #3fb950; }
+
+  @media (max-width: 768px) {
+    .workspace { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>〽️ BETOx1 Live Code Preview</h1>
+  <div class="status"><span class="dot"></span> ONLINE</div>
+</header>
+
+<div class="toolbar">
+  <button class="primary" onclick="runCode()">▶ Run</button>
+  <button onclick="resetCode()">↺ Reset</button>
+  <button onclick="downloadHTML()">⬇ Download HTML</button>
+  <button class="danger" onclick="clearConsole()">🗑 Clear Console</button>
+</div>
+
+<div class="workspace">
+  <!-- KIRI: Editor -->
+  <div class="pane">
+    <div class="editors">
+      <div class="editor-block">
+        <div class="pane-header"><span class="tag html">HTML</span> index.html</div>
+        <textarea id="htmlCode" spellcheck="false"></textarea>
+      </div>
+      <div class="editor-block">
+        <div class="pane-header"><span class="tag css">CSS</span> style.css</div>
+        <textarea id="cssCode" spellcheck="false"></textarea>
+      </div>
+      <div class="editor-block">
+        <div class="pane-header"><span class="tag js">JS</span> script.js</div>
+        <textarea id="jsCode" spellcheck="false"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- KANAN: Preview + Console -->
+  <div class="pane preview-pane">
+    <div class="pane-header">
+      <span class="tag preview">PREVIEW</span> Hasil kode Tuan
+      <span style="margin-left:auto; font-size:11px;">live render</span>
+    </div>
+    <iframe id="previewFrame" sandbox="allow-scripts allow-modals allow-forms"></iframe>
+    <div class="pane-header" style="border-top:1px solid #30363d;">
+      <span class="tag console">CONSOLE</span> Error & Log
+    </div>
+    <div class="console-pane" id="console"></div>
+  </div>
+</div>
+
+<script>
+// ==== Template Awal ====
+const DEFAULT_HTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Halo BETOx1</title>
+</head>
+<body>
+  <h1>Halo Tuan Gigs! 〽️</h1>
+  <p>Ini hasil dari kode Tuan.</p>
+  <button onclick="sapa()">Klik Saya</button>
+  <p id="output"></p>
+</body>
+</html>`;
+
+const DEFAULT_CSS = `body {
+  font-family: sans-serif;
+  padding: 30px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  min-height: 100vh;
+}
+h1 { font-size: 28px; }
+button {
+  padding: 10px 20px;
+  background: white;
+  color: #764ba2;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+button:hover { background: #eee; }`;
+
+const DEFAULT_JS = `function sapa() {
+  const out = document.getElementById('output');
+  out.textContent = '✅ Tombol berhasil diklik pada ' + new Date().toLocaleTimeString();
+  console.log('Sapa dipanggil!');
+}
+console.log('Script loaded ✓');`;
+
+// ==== Elemen ====
+const htmlEl = document.getElementById('htmlCode');
+const cssEl  = document.getElementById('cssCode');
+const jsEl   = document.getElementById('jsCode');
+const frame  = document.getElementById('previewFrame');
+const cons   = document.getElementById('console');
+
+// ==== Init ====
+function init() {
+  htmlEl.value = DEFAULT_HTML;
+  cssEl.value  = DEFAULT_CSS;
+  jsEl.value   = DEFAULT_JS;
+  runCode();
+}
+
+// ==== Log ke console UI ====
+function logMsg(msg, type = 'log') {
+  const line = document.createElement('div');
+  line.className = type;
+  line.textContent = '› ' + msg;
+  cons.appendChild(line);
+  cons.scrollTop = cons.scrollHeight;
+}
+
+function clearConsole() {
+  cons.innerHTML = '';
+  logMsg('Console dibersihkan.', 'ok');
+}
+
+// ==== RUN ====
+function runCode() {
+  const html = htmlEl.value;
+  const css  = cssEl.value;
+  const js   = jsEl.value;
+
+  // Rakit jadi satu dokumen
+  const doc = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>${css}</style>
+</head>
+<body>
+${html.replace(/<!DOCTYPE[^>]*>/i, '').replace(/<\/?html[^>]*>/gi, '').replace(/<head[\s\S]*?<\/head>/gi, '').replace(/<body[^>]*>/i, '').replace(/<\/body>/i, '')}
+<script>
+(function(){
+  try {
+    ${js}
+  } catch (e) {
+    parent.postMessage({ type: 'error', msg: e.message + ' (line ' + e.lineno + ')' }, '*');
+  }
+})();
+
+// Tangkap error runtime
+window.addEventListener('error', function(ev){
+  parent.postMessage({ type: 'error', msg: ev.message + ' @ ' + ev.filename + ':' + ev.lineno }, '*');
+});
+
+// Tangkap console.log
+const _log = console.log;
+console.log = function(){
+  parent.postMessage({ type: 'log', msg: Array.from(arguments).map(String).join(' ') }, '*');
+  _log.apply(console, arguments);
+};
+<\/script>
+</body>
+</html>`;
+
+  frame.srcdoc = doc;
+  logMsg('Kode dijalankan.', 'ok');
+}
+
+// ==== Terima pesan dari iframe ====
+window.addEventListener('message', (e) => {
+  if (!e.data || !e.data.type) return;
+  if (e.data.type === 'error') logMsg('ERROR: ' + e.data.msg, 'err');
+  if (e.data.type === 'log')   logMsg(e.data.msg, 'log');
+});
+
+// ==== RESET ====
+function resetCode() {
+  if (!confirm('Reset semua kode ke template awal?')) return;
+  htmlEl.value = DEFAULT_HTML;
+  cssEl.value  = DEFAULT_CSS;
+  jsEl.value   = DEFAULT_JS;
+  clearConsole();
+  runCode();
+}
+
+// ==== DOWNLOAD ====
+function downloadHTML() {
+  const html = htmlEl.value;
+  const css  = cssEl.value;
+  const js   = jsEl.value;
+
+  const full = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Hasil BETOx1</title>
+<style>
+${css}
+</style>
+</head>
+<body>
+${html.replace(/<!DOCTYPE[^>]*>/i, '').replace(/<\/?html[^>]*>/gi, '').replace(/<head[\s\S]*?<\/head>/gi, '').replace(/<body[^>]*>/i, '').replace(/<\/body>/i, '')}
+<script>
+${js}
+<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([full], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'betox1-output.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  logMsg('File diunduh: betox1-output.html', 'ok');
+}
+
+// ==== Tab support di textarea ====
+[htmlEl, cssEl, jsEl].forEach(el => {
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const s = el.selectionStart;
+      const en = el.selectionEnd;
+      el.value = el.value.substring(0, s) + '  ' + el.value.substring(en);
+      el.selectionStart = el.selectionEnd = s + 2;
+    }
+    // Ctrl+Enter = Run
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      runCode();
+    }
+  });
+});
+
+// ==== Start ====
+init();
+</script>
+</body>
+</html>
